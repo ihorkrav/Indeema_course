@@ -91,3 +91,7 @@ S – Suspended
 
 1 → APP_CPU
 
+.gitignore contains:
+.vscode
+.build
+.devcontainer
