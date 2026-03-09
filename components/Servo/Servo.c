@@ -1,6 +1,5 @@
-#include <stdio.h>
 #include "Servo.h"
-#include "esp_log.h"
+
 #define SERVO_GPIO  8
 
 char* TAG = "Servo";

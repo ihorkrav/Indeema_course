@@ -1,6 +1,5 @@
-#include <stdio.h>
 #include "Joystick.h"
-#include "esp_adc/adc_oneshot.h"
+
 
 // Implied global/static handles based on the code
 static adc_oneshot_unit_handle_t s_adc;

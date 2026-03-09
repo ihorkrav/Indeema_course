@@ -17,7 +17,6 @@ static const char *TAG = "mqtt_example";
 
 
 
-#include "esp_spiffs.h"
 
 
 static esp_mqtt_client_handle_t client = NULL;
