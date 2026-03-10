@@ -29,9 +29,10 @@ void servo_init(void)
 }
 
 void move_servo(float angle){
-   // if(!(iot_servo_read_angle(LEDC_LOW_SPEED_MODE, 0, &angle)!=angle)){
+    if(angle < 0) angle = 0;
+    if(angle > 180) angle = 180;
         iot_servo_write_angle(LEDC_LOW_SPEED_MODE, 0, angle);
-    //}
+    
     ESP_LOGI(TAG, "Servo moved to %.3f degrees", angle);
 }
 
