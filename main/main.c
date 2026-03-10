@@ -12,6 +12,8 @@ static SemaphoreHandle_t control_mutex;
 
 void led_task(void *pvParameters)
 {
+    LED_Strip_Init();
+
     control_mode_t mode;
 
     while(true)
@@ -31,6 +33,8 @@ void led_task(void *pvParameters)
 
 void uart_task(void *pvParameters)
 {
+    uart_init();
+
     while (1)
     {
         int angle = uart_read_servo();
@@ -117,9 +121,7 @@ void app_main(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
 
-    uart_init();
     servo_init();
-    LED_Strip_Init();
 
     control_mutex = xSemaphoreCreateMutex();
 
