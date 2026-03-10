@@ -1,93 +1,215 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- |
+# ESP32-S3 Servo Control System
 
-# FreeRTOS Task Monitoring & CPU Load Example
+## Overview
 
-(See the README.md file in the upper level examples directory for more information about ESP-IDF examples.)
+This project implements a **servo control system for the ESP32-S3** using the **ESP-IDF framework**.
+The servo can be controlled using either:
 
-This example demonstrates how to:
-Create multiple FreeRTOS tasks
-Pin tasks to different CPU cores on ESP32
-Simulate CPU load inside tasks
-Monitor task state, priority, stack usage, and core affinity
-Use FreeRTOS diagnostic functions such as vTaskList()
+* a **joystick**
+* **UART commands**
 
+The current servo position is periodically **published to an MQTT broker**, enabling remote monitoring of the system.
 
-# Example Description
-# Tasks Overview
-This application creates three tasks:
+The application is designed using **FreeRTOS tasks** and **mutex synchronization** to safely share data between components.
 
-Task Name	Core	Function
-Task1	Core 0	Simulates CPU load every 1 second
-Task2	Core 1	Simulates heavier CPU load
-Receiver	Core 1	Monitors and prints system task info
-CPU Load Simulation
+---
 
-The function simulate_cpu_load() artificially occupies the CPU for a specified time using a busy loop based on esp_timer_get_time().
+## Features
 
-simulate_cpu_load(500);   // 500 ms CPU load
-simulate_cpu_load(1000);  // 1000 ms CPU load
+*  **Joystick control**
 
-This allows you to observe how:
-Tasks block lower-priority tasks on the same core
-Tasks on the other core continue running independently
-Task Monitoring
-The vTaskMonitor task periodically prints task information using:
-vTaskList(buffer);
+  * Analog joystick input controls servo angle (0–180°).
+*  **UART control**
 
-Displayed information includes:
-Task name
-Task state (Running, Blocked, Ready, Suspended)
-Priority
-Remaining stack (words)
-Task number
-Core ID
+  * Servo angle can be sent via serial terminal (e.g. PuTTY).
+  * When a UART command is received, joystick control is temporarily disabled.
+* **Control mode switching**
 
-## How to Use Example
-Before configuring and building the project, set the correct chip target:
-"idf.py set-target <chip_name>"
+  * Pressing the joystick button restores joystick control.
+* **MQTT telemetry**
 
-Open the project configuration menu:
-"idf.py menuconfig"
+  * Servo position is periodically published to an MQTT topic.
+* **LED status indicator**
 
-Make sure the following options are enabled:
-Component config → FreeRTOS → kernel
-☑ Enable configUSE_TRACE_FACILITY 
-☑ Enable configUSE_STATS_FORMATTING_FUNCTIONS
-☑ Enable dispaly pf xCoreId in vTaskList
+  * Red LED → Joystick control mode
+  * Blue LED → UART control mode
+* **FreeRTOS multitasking**
 
-###Build and Flash
-Build, flash, and monitor the application:
-"idf.py -p PORT flash monitor"
+  * Separate tasks handle UART, joystick, MQTT communication, and LED status.
 
-To exit the monitor, press:
-"Ctrl + ]"
+---
 
-#### Example Output
+## System Architecture
 
-Task Name    Status  Prio  Stack  Num  CoreId
-------------------------------------------------------------
-Task1        R       1     1700    5
-Task2        B       1     1600    6
-Receiver     R       1     1800    7
-IDLE0        R       0     800     0
-IDLE1        R       0     780     1
+The application is built using **independent FreeRTOS tasks**:
 
-# Output Explanation
+| Task            | Description                                     |
+| --------------- | ----------------------------------------------- |
+| `uart_task`     | Reads servo angle commands from UART            |
+| `joystick_task` | Reads joystick position and updates servo angle |
+| `mqtt_task`     | Sends servo position data to the MQTT broker    |
+| `led_task`      | Displays current control mode via LED           |
 
-# Status
+Shared data between tasks (`servo_angle` and `control_mode`) is protected using a **FreeRTOS mutex**.
 
-R – Running
+---
 
-B – Blocked
+## Control Logic
 
-S – Suspended
+### Joystick Mode
 
-# Stack shows remaining stack space (words)
+* Default control mode
+* Servo angle follows the joystick X-axis
 
-# CoreId
+### UART Mode
 
-0 → PRO_CPU
+* Activated when a valid angle is received via UART
+* Joystick input is ignored
 
-1 → APP_CPU
+### Returning to Joystick Mode
 
+* Press the joystick button once
+
+---
+
+## MQTT Communication
+
+```
+To configure MQTT broker use menuconfig.
+```
+
+```
+To configure WiFI settings use menucinfig.
+```
+
+Servo position is published as JSON:
+
+```
+{"servo":90}
+```
+
+Example topic:
+
+```
+esp-lection/servo
+```
+
+---
+
+## Hardware Requirements
+
+* ESP32-S3 development board
+* Analog joystick module
+* Servo motor
+* WS2812 or compatible LED strip (status indicator)
+* USB connection for UART communication
+
+---
+
+## Software Requirements
+
+* **ESP-IDF v5.x**
+* Python environment configured for ESP-IDF
+* Serial terminal (PuTTY / minicom / screen)
+* MQTT broker (example: `broker.hivemq.com`)
+
+---
+
+## Project Structure
+
+```
+components/
+    UART/
+    Joystick/
+    Servo/
+    MQTT/
+    Wifi/
+    LED/
+
+main/
+    main.c
+
+CMakeLists.txt
+sdkconfig
+```
+
+Each peripheral or feature is implemented as a **separate ESP-IDF component**.
+
+---
+
+## Build and Flash
+
+### 1. Set ESP-IDF environment
+
+```
+. $HOME/esp/esp-idf/export.sh
+```
+
+### 2. Build the project
+
+```
+idf.py build
+```
+
+### 3. Flash firmware
+
+```
+idf.py flash
+```
+
+### 4. Open serial monitor
+
+```
+idf.py monitor
+```
+
+---
+
+## UART Control
+
+Connect using a serial terminal:
+
+```
+Baud rate: 115200
+```
+
+Send a number between:
+
+```
+0 - 180
+```
+
+Example:
+
+```
+90
+```
+
+The servo will move to the specified angle.
+
+---
+
+## Example Workflow
+
+1. Move the joystick → servo moves
+2. Send `120` via UART → servo moves to 120°
+3. LED turns blue indicating **UART mode**
+4. Press joystick button → LED turns red and joystick control resumes
+5. Servo position is continuously sent to MQTT
+
+---
+
+## Future Improvements
+
+* MQTT command control for remote servo positioning
+* OTA firmware updates
+* PID smoothing for joystick input
+* Web interface for monitoring and control
+
+---
+
+## License
+
+This project is intended for **educational purposes**.
